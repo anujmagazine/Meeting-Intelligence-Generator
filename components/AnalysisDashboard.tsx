@@ -1,25 +1,77 @@
 
-import React from 'react';
-import { MeetingAnalysis, DeepInsight } from '../types';
+import React, { useRef, useState } from 'react';
+import { MeetingAnalysis } from '../types';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { CheckCircle2, AlertCircle, Sparkles, TrendingUp, Users, Target, Lightbulb } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Sparkles, TrendingUp, Users, Target, Download, FileDown } from 'lucide-react';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 interface Props {
   data: MeetingAnalysis;
 }
 
 const AnalysisDashboard: React.FC<Props> = ({ data }) => {
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (!dashboardRef.current) return;
+    
+    setIsExporting(true);
+    
+    const element = dashboardRef.current;
+    const opt = {
+      margin: [10, 10],
+      filename: `Lumina_Analysis_${data.title.replace(/\s+/g, '_')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        backgroundColor: '#0f172a',
+        scrollY: 0
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
-    <div className="space-y-8 pb-12 animate-in fade-in duration-700">
+    <div ref={dashboardRef} className="space-y-8 pb-12 animate-in fade-in duration-700 bg-slate-950">
       {/* Header Info */}
       <div className="glass p-8 rounded-3xl border-l-4 border-blue-500">
-        <div className="flex justify-between items-start mb-4">
-          <div>
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
+          <div className="flex-1">
             <h1 className="text-4xl font-display font-bold mb-2 tracking-tight">{data.title}</h1>
             <p className="text-slate-400 font-medium">{data.date || "Session Analysis"}</p>
           </div>
-          <div className="bg-blue-500/10 text-blue-400 px-4 py-2 rounded-full text-sm font-semibold border border-blue-500/20">
-            Intelligent Review Complete
+          <div className="flex items-center gap-3 no-print" data-html2canvas-ignore="true">
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isExporting}
+              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white px-5 py-2.5 rounded-2xl text-sm font-bold border border-white/10 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isExporting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  Generating PDF...
+                </>
+              ) : (
+                <>
+                  <FileDown size={18} className="text-blue-400" />
+                  Download Report
+                </>
+              )}
+            </button>
+            <div className="bg-blue-500/10 text-blue-400 px-4 py-2.5 rounded-2xl text-sm font-semibold border border-blue-500/20 whitespace-nowrap">
+              Intelligent Review Complete
+            </div>
           </div>
         </div>
         <p className="text-xl text-slate-300 leading-relaxed max-w-4xl">{data.summary}</p>
