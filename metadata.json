@@ -1,0 +1,7 @@
+{
+  "name": "Lumina Meeting Intelligence",
+  "description": "An advanced meeting analyzer that transforms audio and transcripts into deep, non-obvious insights and actionable intelligence using Gemini 3.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
