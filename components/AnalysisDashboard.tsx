@@ -2,9 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { MeetingAnalysis } from '../types';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { CheckCircle2, AlertCircle, Sparkles, TrendingUp, Users, Target, Download, FileDown } from 'lucide-react';
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
+import { CheckCircle2, AlertCircle, Sparkles, TrendingUp, Users, Target, FileDown } from 'lucide-react';
 
 interface Props {
   data: MeetingAnalysis;
@@ -15,40 +13,52 @@ const AnalysisDashboard: React.FC<Props> = ({ data }) => {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleDownloadPDF = async () => {
-    if (!dashboardRef.current) return;
+    const html2pdf = (window as any).html2pdf;
+    if (!dashboardRef.current || !html2pdf) {
+      console.error('PDF library or dashboard element not found');
+      return;
+    }
     
     setIsExporting(true);
     
+    // We target a clone or ensure the current element is styled correctly for capture
     const element = dashboardRef.current;
+    
     const opt = {
-      margin: [10, 10],
-      filename: `Lumina_Analysis_${data.title.replace(/\s+/g, '_')}.pdf`,
+      margin: [10, 10, 10, 10],
+      filename: `Lumina_Analysis_${data.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
         scale: 2, 
         useCORS: true, 
-        backgroundColor: '#0f172a',
-        scrollY: 0
+        letterRendering: true,
+        backgroundColor: '#0f172a', // Ensure background is solid for the PDF
+        scrollY: 0,
+        windowWidth: 1200 // Force a desktop-like width for better layout in PDF
       },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
     try {
+      // Small delay to ensure any dynamic styles are applied
+      await new Promise(resolve => setTimeout(resolve, 100));
       await html2pdf().set(opt).from(element).save();
     } catch (error) {
       console.error('PDF generation failed:', error);
+      alert('Failed to generate PDF. Please try again.');
     } finally {
       setIsExporting(false);
     }
   };
 
   return (
-    <div ref={dashboardRef} className="space-y-8 pb-12 animate-in fade-in duration-700 bg-slate-950">
+    <div ref={dashboardRef} className="space-y-8 pb-12 animate-in fade-in duration-700 bg-slate-950 p-4 rounded-3xl">
       {/* Header Info */}
       <div className="glass p-8 rounded-3xl border-l-4 border-blue-500">
         <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
           <div className="flex-1">
-            <h1 className="text-4xl font-display font-bold mb-2 tracking-tight">{data.title}</h1>
+            <h1 className="text-4xl font-display font-bold mb-2 tracking-tight text-white">{data.title}</h1>
             <p className="text-slate-400 font-medium">{data.date || "Session Analysis"}</p>
           </div>
           <div className="flex items-center gap-3 no-print" data-html2canvas-ignore="true">
@@ -60,7 +70,7 @@ const AnalysisDashboard: React.FC<Props> = ({ data }) => {
               {isExporting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  Generating PDF...
+                  Processing...
                 </>
               ) : (
                 <>
@@ -70,7 +80,7 @@ const AnalysisDashboard: React.FC<Props> = ({ data }) => {
               )}
             </button>
             <div className="bg-blue-500/10 text-blue-400 px-4 py-2.5 rounded-2xl text-sm font-semibold border border-blue-500/20 whitespace-nowrap">
-              Intelligent Review Complete
+              Review Complete
             </div>
           </div>
         </div>
@@ -78,21 +88,21 @@ const AnalysisDashboard: React.FC<Props> = ({ data }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Deep Insights - The "Interesting" stuff */}
+        {/* Deep Insights */}
         <div className="lg:col-span-2 space-y-8">
           <section className="glass p-8 rounded-3xl border-l-4 border-purple-500">
-            <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-3">
+            <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-3 text-white">
               <Sparkles className="text-purple-400" /> Deep Insights & Non-Obvious Patterns
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {data.deepInsights.map((insight, idx) => (
-                <div key={idx} className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700 hover:border-purple-500/30 transition-colors group">
+                <div key={idx} className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs font-bold uppercase tracking-widest text-purple-400 bg-purple-400/10 px-2 py-1 rounded">
                       {insight.category}
                     </span>
                   </div>
-                  <h3 className="font-bold text-lg mb-2 text-slate-100 group-hover:text-purple-300 transition-colors">{insight.insight}</h3>
+                  <h3 className="font-bold text-lg mb-2 text-slate-100">{insight.insight}</h3>
                   <p className="text-sm text-slate-400 mb-4 italic">"Evidence: {insight.evidence}"</p>
                   <div className="mt-auto">
                     <p className="text-sm font-semibold text-slate-300">Significance:</p>
@@ -104,7 +114,7 @@ const AnalysisDashboard: React.FC<Props> = ({ data }) => {
           </section>
 
           <section className="glass p-8 rounded-3xl border-l-4 border-indigo-500">
-            <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-3">
+            <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-3 text-white">
               <TrendingUp className="text-indigo-400" /> Sentiment & Engagement Flow
             </h2>
             <div className="h-64 w-full">
@@ -138,10 +148,10 @@ const AnalysisDashboard: React.FC<Props> = ({ data }) => {
           </section>
         </div>
 
-        {/* Sidebar - Quick Facts */}
+        {/* Sidebar */}
         <div className="space-y-8">
           <section className="glass p-6 rounded-3xl">
-            <h2 className="text-xl font-display font-bold mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-display font-bold mb-4 flex items-center gap-2 text-white">
               <CheckCircle2 className="text-emerald-400" /> Key Decisions
             </h2>
             <ul className="space-y-3">
@@ -155,7 +165,7 @@ const AnalysisDashboard: React.FC<Props> = ({ data }) => {
           </section>
 
           <section className="glass p-6 rounded-3xl">
-            <h2 className="text-xl font-display font-bold mb-4 flex items-center gap-2">
+            <h2 className="text-xl font-display font-bold mb-4 flex items-center gap-2 text-white">
               <AlertCircle className="text-orange-400" /> Action Items
             </h2>
             <div className="space-y-4">
@@ -179,7 +189,7 @@ const AnalysisDashboard: React.FC<Props> = ({ data }) => {
           </section>
 
           <section className="glass p-6 rounded-3xl">
-             <h2 className="text-xl font-display font-bold mb-4 flex items-center gap-2">
+             <h2 className="text-xl font-display font-bold mb-4 flex items-center gap-2 text-white">
               <Users className="text-pink-400" /> Dynamics
             </h2>
             <p className="text-sm text-slate-400 leading-relaxed italic border-l-2 border-pink-500/30 pl-4">
@@ -196,7 +206,7 @@ const AnalysisDashboard: React.FC<Props> = ({ data }) => {
             <Target className="w-12 h-12 text-blue-400" />
           </div>
           <div>
-            <h3 className="text-2xl font-display font-bold mb-2">Strategic Context</h3>
+            <h3 className="text-2xl font-display font-bold mb-2 text-white">Strategic Context</h3>
             <p className="text-slate-300 leading-relaxed">{data.strategicAlignment}</p>
           </div>
         </div>
